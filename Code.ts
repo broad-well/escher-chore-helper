@@ -68,11 +68,13 @@ function findOngoingChoreAndRow(suite: string, chore?: string) {
     if (sheet == null) throw new Error('Missing suite chore history in spreadsheet');
     const fullValues = sheet.getDataRange().getValues();
     for (let row = 1; row < fullValues.length; ++row) {
-        if (!valueExists(fullValues[row][fullValues[0].indexOf('Time finished')]) &&
-            valueExists(fullValues[row][fullValues[0].indexOf('Chore')]) &&
-            (!chore || fullValues[row][fullValues[0].indexOf('Chore')] == chore) &&
-            fullValues[row][fullValues[0].indexOf('Completed by')] == Session.getActiveUser().getEmail())
-            return [fullValues[row][fullValues[0].indexOf('Chore')], row];
+        const rowItem = (header: string) => fullValues[row][fullValues[0].indexOf(header)];
+
+        if (!valueExists(rowItem('Time finished')) &&
+            valueExists(rowItem('Chore')) &&
+            (!chore || rowItem('Chore') == chore) &&
+            rowItem('Completed by') == Session.getActiveUser().getEmail())
+            return [rowItem('Chore'), row];
     }
     return [null, null];
 }

@@ -12,7 +12,7 @@
         <select v-model="selectedChore" class="chore-list">
           <option v-for="chore in chores" :value="chore">{{ chore }}</option>
         </select>
-        <button class="button primary" :disabled="chores.length === 0" @click="startChore">Start work</button>
+        <button class="button primary" :disabled="chores.length === 0" @click="start">Start work</button>
       </div>
       <div v-else-if="state == 'ongoing'">
         <h1>{{ selectedChore }}</h1>
@@ -53,7 +53,7 @@
         selectedChore: null,
         state: 'start',
         tasks: [],
-        async startChore() {
+        async start() {
           await run('beginChore', [suite, this.selectedChore]);
           this.state = 'ongoing';
           this.tasks = await run('listChoreTasks', [this.selectedChore]);

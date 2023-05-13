@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <link rel="stylesheet" href="https://unpkg.com/chota@latest">
+    <title>Escher Chore Tracker</title>
+  </head>
+  <body style="width: 100%">
+    <main style="padding: 2rem; max-width: 600px; margin: auto auto;" v-scope @vue:mounted="onMount()">
+      <div v-if="state == 'start'">
+        <p>👋 Greetings! Pick a chore to complete.</p>
+        <select v-model="selectedChore" class="chore-list">
+          <option v-for="chore in chores" :value="chore">{{ chore }}</option>
+        </select>
+        <button class="button primary" :disabled="chores.length === 0" @click="startChore">Start work</button>
+      </div>
+      <div v-else-if="state == 'ongoing'">
+        <h1>{{ selectedChore }}</h1>
+        <p>Please complete these tasks.</p>
+        <div class="tasks">
+          <div v-for="(task, i) in tasks">
+            <input type="checkbox" :aria-label="task" :id="`task-${i}`" >
+            <label :for="`task-${i}`">{{ task }}</label>
+          </div>
+        </div>
+        <button class="button success" @click="finish">Finish work</button>
+        <button class="button error" @click="cancel">Cancel work</button>
+      </div>
+      <div v-else-if="state == 'done'">
+        <p>😄 You are done! Thanks for being cooperative.</p>
+      </div>
+      <div v-else-if="state == 'cancelled'">
+        <p>⛔️ You have cancelled your chore.</p>
+        <p><i>Refresh to start another chore.</i></p>
+      </div>
+    </main>
+    <script type="module">
+      import { createApp, reactive } from 'https://unpkg.com/petite-vue?module'
+
+      const suite = "Bag End";
+
+      function run(func, args) {
+        return new Promise((res, rej) => {
+          google.script.run
+            .withSuccessHandler(res)
+            .withFailureHandler(rej)[func](...args);
+        })
+      }
+
+      createApp({
+        suite,
+        chores: [],
+        selectedChore: null,
+        state: 'start',
+        tasks: [],
+        async startChore() {
+          await run('beginChore', [suite, this.selectedChore]);
+          this.state = 'ongoing';
+          this.tasks = await run('listChoreTasks', [this.selectedChore]);
+        },
+        async onMount() {
+          if (this.state === 'start') {
+            const chore = await run('findOngoingChore', [suite]);
+            if (chore != null) {
+              this.selectedChore = chore;
+              this.state = 'ongoing';
+              this.tasks = await run('listChoreTasks', [this.selectedChore]);
+            } else {
+              this.chores = await run('listChores', [suite]);
+              this.selectedChore = this.chores[0];
+            }
+          }
+        },
+        async finish() {
+          await run('finishOngoingChore', [suite, this.selectedChore]);
+          this.state = 'done';
+        },
+        async cancel() {
+          await run('cancelOngoingChore', [suite, this.selectedChore]);
+          this.state = 'cancelled';
+        }
+      }).mount();
+
+
+    </script>
+    <style>
+      main {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+      }
+      .tasks, .chore-list {
+        margin-bottom: 1rem;
+      }
+    </style>
+  </body>
+</html>

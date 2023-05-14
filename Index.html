@@ -1,8 +1,11 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <base target="_top">
     <link rel="stylesheet" href="https://unpkg.com/chota@latest">
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Escher Chore Tracker</title>
   </head>
   <body style="width: 100%">
@@ -10,7 +13,7 @@
       <div v-if="state == 'sign-in'">
         <h1>Escher Chore Helper</h1>
         <p>Please write your initials below for identification.</p>
-        <input type="text" v-model="user" placeholder="First initial, last initial" maxlength="2">
+        <input type="text" v-model="user" placeholder="First initial, last initial" maxlength="2" class="user-entry">
         <button class="button primary" @click="signIn">Sign in</button>
       </div>
       <div v-else-if="state == 'start'">
@@ -81,7 +84,9 @@
             alert('These initials are not registered with any suite. Please try again.');
             this.user = '';
           } else {
+            localStorage.setItem('user', this.user);
             this.state = 'start';
+            console.log('will find ongoing chores');
             const chore = await run('findOngoingChore', [this.user, suite]);
             if (chore != null) {
               this.selectedChore = chore;
@@ -103,7 +108,7 @@
         flex-direction: column;
         gap: 1rem;
       }
-      .tasks, .chore-list {
+      .tasks, .chore-list, .user-entry {
         margin-bottom: 1rem;
       }
     </style>

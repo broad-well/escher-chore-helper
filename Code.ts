@@ -10,12 +10,24 @@ function listChores(suite: string) {
     return sheet.getDataRange().getValues().map(row => row[0]);
 }
 
-function beginChore(suite: string, chore: string) {
+function beginChore(user: string, suite: string, chore: string) {
     const sheet = backingSpreadsheet.getSheetByName(`${suite}: History`);
     if (sheet == null) throw new Error('Missing suite chore history in spreadsheet');
     sheet.appendRow([
-        chore, new Date(), null, Session.getActiveUser().getEmail()
+        chore, new Date(), null, user
     ]);
+}
+
+// TODO if expanding to other suites, supply the suite as well to prevent clashes in initials between suites to cause ambiguity
+function checkInitials(initials: string): string|null {
+    const listSheet = backingSpreadsheet.getSheetByName('Suitemates');
+    if (listSheet == null) throw new Error('Missing suitemates sheet in spreadsheet');
+    for (let row = 2; row < 1000; ++row) {
+        const storedInitials = listSheet.getRange(row, 1).getValue();
+        if (storedInitials == '' || storedInitials == null) break;
+        if (storedInitials === initials) return listSheet.getRange(row, 2).getValue();
+    }
+    return null;
 }
 
 function listChoreTasks(chore: string) {
@@ -35,17 +47,17 @@ function listChoreTasks(chore: string) {
     return tasks;
 }
 
-function findOngoingChore(suite: string) {
-    const choreRow = findOngoingChoreAndRow(suite);
+function findOngoingChore(user: string, suite: string) {
+    const choreRow = findOngoingChoreAndRow(user, suite);
     return choreRow[0];
 }
 
-function finishOngoingChore(suite: string, chore: string) {
+function finishOngoingChore(user: string, suite: string, chore: string) {
     const sheet = backingSpreadsheet.getSheetByName(`${suite}: History`);
     if (sheet == null) throw new Error('Missing suite chore history in spreadsheet');
     const headers = sheet.getRange('1:1').getValues();
 
-    const row = findOngoingChoreAndRow(suite, chore)[1];
+    const row = findOngoingChoreAndRow(user, suite, chore)[1];
     if (row !== null) {
         sheet.getRange(row + 1, headers[0].indexOf('Time finished') + 1).setValue(new Date());
     } else {
@@ -53,16 +65,16 @@ function finishOngoingChore(suite: string, chore: string) {
     }
 }
 
-function cancelOngoingChore(suite: string, chore: string) {
+function cancelOngoingChore(user: string, suite: string, chore: string) {
     const sheet = backingSpreadsheet.getSheetByName(`${suite}: History`);
     if (sheet == null) throw new Error('Missing suite chore history in spreadsheet');
-    const row = findOngoingChoreAndRow(suite, chore)[1];
+    const row = findOngoingChoreAndRow(user, suite, chore)[1];
     if (row !== null) {
         sheet.deleteRow(row + 1);
     }
 }
 
-function findOngoingChoreAndRow(suite: string, chore?: string) {
+function findOngoingChoreAndRow(user: string, suite: string, chore?: string) {
     const valueExists = (v: any) => v?.toString()?.length > 0;
     const sheet = backingSpreadsheet.getSheetByName(`${suite}: History`);
     if (sheet == null) throw new Error('Missing suite chore history in spreadsheet');
@@ -73,7 +85,7 @@ function findOngoingChoreAndRow(suite: string, chore?: string) {
         if (!valueExists(rowItem('Time finished')) &&
             valueExists(rowItem('Chore')) &&
             (!chore || rowItem('Chore') == chore) &&
-            rowItem('Completed by') == Session.getActiveUser().getEmail())
+            rowItem('Completed by') == user)
             return [rowItem('Chore'), row];
     }
     return [null, null];

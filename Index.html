@@ -7,7 +7,13 @@
   </head>
   <body style="width: 100%">
     <main style="padding: 2rem; max-width: 600px; margin: auto auto;" v-scope @vue:mounted="onMount()">
-      <div v-if="state == 'start'">
+      <div v-if="state == 'sign-in'">
+        <h1>Escher Chore Helper</h1>
+        <p>Please write your initials below for identification.</p>
+        <input type="text" v-model="user" placeholder="First initial, last initial" maxlength="2">
+        <button class="button primary" @click="signIn">Sign in</button>
+      </div>
+      <div v-else-if="state == 'start'">
         <p>👋 Greetings! Pick a chore to complete.</p>
         <select v-model="selectedChore" class="chore-list">
           <option v-for="chore in chores" :value="chore">{{ chore }}</option>
@@ -51,16 +57,32 @@
         suite,
         chores: [],
         selectedChore: null,
-        state: 'start',
+        state: 'sign-in',
         tasks: [],
+        user: localStorage.getItem('user') ?? '',
         async start() {
-          await run('beginChore', [suite, this.selectedChore]);
+          await run('beginChore', [this.user, suite, this.selectedChore]);
           this.state = 'ongoing';
           this.tasks = await run('listChoreTasks', [this.selectedChore]);
         },
         async onMount() {
-          if (this.state === 'start') {
-            const chore = await run('findOngoingChore', [suite]);
+        },
+        async finish() {
+          await run('finishOngoingChore', [this.user, suite, this.selectedChore]);
+          this.state = 'done';
+        },
+        async cancel() {
+          await run('cancelOngoingChore', [this.user, suite, this.selectedChore]);
+          this.state = 'cancelled';
+        },
+        async signIn() {
+          const userSuite = await run('checkInitials', [this.user]);
+          if (userSuite !== suite) {
+            alert('These initials are not registered with any suite. Please try again.');
+            this.user = '';
+          } else {
+            this.state = 'start';
+            const chore = await run('findOngoingChore', [this.user, suite]);
             if (chore != null) {
               this.selectedChore = chore;
               this.state = 'ongoing';
@@ -70,14 +92,6 @@
               this.selectedChore = this.chores[0];
             }
           }
-        },
-        async finish() {
-          await run('finishOngoingChore', [suite, this.selectedChore]);
-          this.state = 'done';
-        },
-        async cancel() {
-          await run('cancelOngoingChore', [suite, this.selectedChore]);
-          this.state = 'cancelled';
         }
       }).mount();
 
